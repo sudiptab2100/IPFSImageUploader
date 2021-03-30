@@ -1,10 +1,15 @@
+var fileName;
+var ipfsGateway = 'https://ipfs.io/ipfs/';
+var ipfsHash = 'QmPcFGJ5YhZCgdV18kJMHLAtMCGdAeLsXEpj8HynFQLssq';
+
 App = {
     web3provider: null,
     contracts: {},
-    account: '0x0',
+    account: null,
 
     init: function() {
         console.log('App Initialized...');
+        document.getElementById('photo').src = ipfsGateway + ipfsHash;
         App.initWeb3();
     },
     // Initializes Web3
@@ -23,41 +28,60 @@ App = {
     },
     // Initializes Contract
     initContracts: function() {
-        $.getJSON('ContractName.json', function(instance) { // Set Contract Name Properly
-            App.contracts.DeElect = TruffleContract(instance);
-            App.contracts.DeElect.setProvider(App.web3provider);
-            App.contracts.DeElect.deployed().then(function(instance) {
+        $.getJSON('IPFSImageUploader.json', function(ipfsImageUploader) {
+            App.contracts.IPFSImageUploader = TruffleContract(ipfsImageUploader);
+            App.contracts.IPFSImageUploader.setProvider(App.web3provider);
+            App.contracts.IPFSImageUploader.deployed().then(function(instance) {
                 console.log('Contract Address: ', instance.address);
-                App.render();
+                App.setAccount();
                 App.listenForEvents();
             });
         });
     },
     // Listen for Events and Take Actions
     listenForEvents: function() {
-        App.contracts.DeElect.deployed().then(function(instance) {
+        App.contracts.IPFSImageUploader.deployed().then(function(instance) {
             // Event 1
-            instance.Event1({
+            instance.IPFSHash({
                 filter: {},
                 fromBlock: 0
             }, function(error, event) { 
-                console.log("Event1: ", event); 
-                App.render(); 
-            });
-
-            // Event 2
-            instance.Event2({
-                filter: {},
-                fromBlock: 0
-            }, function(error, event) { 
-                console.log("Event2: ", event); 
-                App.render(); 
+                console.log("Event : ", event); 
+                App.render();
             });
         });
     },
-    render: function(){
-        // UI Changes
+    setAccount: function() {
+        web3.eth.getAccounts().then(function(accounts) {
+            App.account = accounts[0];
+            console.log('Account : ', App.account);
+            App.render();
+        });
     },
+    render: function(){
+        if(account !== null) {
+            $('#account').html(App.account);
+            $('#disconnected').hide();
+            $('#connected').show();
+        }
+        App.getHash();
+    },
+    setHash: function(hash) {
+        App.contracts.IPFSImageUploader.deployed().then(function(instance) {
+            return instance.set(hash, { from: App.account });
+        }).then(function(receipt) {
+            App.getHash();
+        });
+    },
+    getHash: function() {
+        App.contracts.IPFSImageUploader.deployed().then(function(instance) {
+            return instance.get();
+        }).then(function(hash) {
+            console.log('IPFS Hash From Contract: ', hash);
+            ipfsHash = hash;
+            document.getElementById('photo').src = ipfsGateway + ipfsHash;
+        });
+    }
 }
 
 
@@ -67,5 +91,11 @@ $(document).ready(function() {
 });
 
 window.ethereum.on('accountsChanged', (accounts) => {
-    App.render();
+    App.setAccount();
+});
+
+$(".custom-file-input").on("change", function() {
+    fileName = $(this).val(); // .split("\\").pop();
+    let label = fileName.split("\\").pop();
+    $(this).siblings(".custom-file-label").addClass("selected").html(label);
 });
