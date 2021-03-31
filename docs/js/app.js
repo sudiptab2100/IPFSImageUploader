@@ -21,7 +21,7 @@ App = {
             window.ethereum.enable();
         } else {
             // Specify default instance if no web3 instance provided
-            App.web3Provider = new Web3.providers.HttpProvider('https://ropsten.infura.io/v3/88ac0044e5be425f8a4bf77b579474d8');
+            App.web3Provider = new Web3.providers.HttpProvider('https://127.0.0.1/7545');
             window.web3 = new Web3(window.ethereum);
         }
         App.initContracts();
